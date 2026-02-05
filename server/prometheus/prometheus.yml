@@ -1,0 +1,15 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  - job_name: "rpi-nodes"
+    static_configs:
+      - targets:
+          - "192.168.0.103:9101"  # RPi 1
+          - "192.168.0.103:9102"  # RPi 2
+          - "192.168.0.103:9103"  # RPi 3
