@@ -1,4 +1,12 @@
 services:
+  sensor-app:
+    build: ./sensor-app
+    container_name: sensor-app
+    restart: unless-stopped
+    environment:
+      - NODE_ID=${NODE_ID:-rpi-node}
+      - SAMPLE_INTERVAL=${SAMPLE_INTERVAL:-10}
+
   node-exporter:
     image: prom/node-exporter:latest
     container_name: node-exporter

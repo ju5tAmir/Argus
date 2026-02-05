@@ -1,17 +1,26 @@
 filebeat.inputs:
-  # Docker container logs only (no real system logs in demo)
-  - type: log
+  # Docker container logs
+  - type: filestream
+    id: docker-logs
     enabled: true
     paths:
       - /var/lib/docker/containers/*/*.log
-    json.keys_under_root: true
-    json.add_error_key: true
+    parsers:
+      - ndjson:
+          target: "json"
+          overwrite_keys: false
     processors:
+      - decode_json_fields:
+          fields: ["json.log"]
+          target: ""
+          overwrite_keys: true
       - add_docker_metadata:
           host: "unix:///var/run/docker.sock"
 
 processors:
   - add_host_metadata: ~
+  - drop_fields:
+      fields: ["json"]
 
 output.elasticsearch:
   hosts: ["elasticsearch:9200"]

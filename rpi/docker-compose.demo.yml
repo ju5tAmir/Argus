@@ -20,6 +20,30 @@ services:
     ports:
       - "9103:9100"
 
+  sensor-rpi-1:
+    build: ./sensor-app
+    container_name: sensor-rpi-1
+    restart: unless-stopped
+    environment:
+      - NODE_ID=rpi-1
+      - SAMPLE_INTERVAL=5
+
+  sensor-rpi-2:
+    build: ./sensor-app
+    container_name: sensor-rpi-2
+    restart: unless-stopped
+    environment:
+      - NODE_ID=rpi-2
+      - SAMPLE_INTERVAL=5
+
+  sensor-rpi-3:
+    build: ./sensor-app
+    container_name: sensor-rpi-3
+    restart: unless-stopped
+    environment:
+      - NODE_ID=rpi-3
+      - SAMPLE_INTERVAL=5
+
   filebeat-demo:
     image: docker.elastic.co/beats/filebeat:8.17.0
     container_name: filebeat-demo
@@ -33,6 +57,10 @@ services:
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - filebeat_demo_data:/usr/share/filebeat/data
+    depends_on:
+      - sensor-rpi-1
+      - sensor-rpi-2
+      - sensor-rpi-3
 
 volumes:
   filebeat_demo_data:
