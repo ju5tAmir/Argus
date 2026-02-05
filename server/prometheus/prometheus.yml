@@ -18,6 +18,6 @@ scrape_configs:
   - job_name: "rpi-nodes"
     static_configs:
       - targets:
-          - "192.168.0.103:9101"  # RPi 1
-          - "192.168.0.103:9102"  # RPi 2
-          - "192.168.0.103:9103"  # RPi 3
+          - "rpi-node-1:9100"  # RPi 1 (demo)
+          - "rpi-node-2:9100"  # RPi 2 (demo)
+          - "rpi-node-3:9100"  # RPi 3 (demo)

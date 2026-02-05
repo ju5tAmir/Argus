@@ -58,6 +58,11 @@ services:
     depends_on:
       - elasticsearch
 
+networks:
+  default:
+    external: true
+    name: argus-network
+
 volumes:
   prometheus_data:
   grafana_data:

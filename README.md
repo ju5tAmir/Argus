@@ -4,9 +4,11 @@ Prometheus + Grafana + Alertmanager monitoring stack with EFK centralized loggin
 
 ## Architecture
 
+All services communicate via the `argus-network` Docker bridge network. No IP dependencies - works across WiFi network changes.
+
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                  Central Server (Docker)                     │
+│            Central Server (argus-network)                    │
 │                                                             │
 │  ┌───────────┐    ┌────────────┐    ┌─────────────────┐    │
 │  │  Grafana   │←───│ Prometheus │    │ Elasticsearch   │    │
@@ -20,7 +22,11 @@ Prometheus + Grafana + Alertmanager monitoring stack with EFK centralized loggin
 │        └─────────────┼─────────────────────┘ │  :5601   │  │
 │                      │                       └──────────┘  │
 └──────────────────────┼──────────────────────────────────────┘
-                       │ scrape every 15s        ▲ logs
+                       │                         ▲
+              DNS: rpi-node-1:9100              │ DNS: elasticsearch:9200
+                   rpi-node-2:9100              │
+                   rpi-node-3:9100              │
+                       │                         │
        ┌───────────────┼───────────────┐         │
        ▼               ▼               ▼         │
   ┌──────────┐   ┌──────────┐   ┌──────────┐    │
@@ -29,25 +35,26 @@ Prometheus + Grafana + Alertmanager monitoring stack with EFK centralized loggin
   │ Exporter │   │ Exporter │   │ Exporter │    │
   │  :9100   │   │  :9100   │   │  :9100   │    │
   │ Filebeat │   │ Filebeat │   │ Filebeat │────┘
+  │  Sensors │   │  Sensors │   │  Sensors │
   └──────────┘   └──────────┘   └──────────┘
+       ▲               ▲               ▲
+       └───────────────┴───────────────┘
+            All on argus-network
 ```
 
 ## Setup
 
-### 1. Configure RPi Target IPs
+### 1. Create Shared Docker Network
 
-Edit `server/prometheus/prometheus.yml` and replace the placeholder IPs with your actual Raspberry Pi IPs:
+On your monitoring server (and each RPi if production deployment):
 
-```yaml
-- targets:
-    - "192.168.1.101:9100"  # RPi 1
-    - "192.168.1.102:9100"  # RPi 2
-    - "192.168.1.103:9100"  # RPi 3
+```bash
+docker network create argus-network
 ```
 
-### 2. Start the Central Server
+This creates a Docker bridge network that all services will use for communication.
 
-On the monitoring server:
+### 2. Start the Central Server
 
 ```bash
 cd server
@@ -60,14 +67,33 @@ Wait ~60 seconds for Elasticsearch to initialize, then verify:
 curl http://localhost:9200/_cluster/health?pretty
 ```
 
-### 3. Deploy on Each RPi
+### 3. Deploy on Each RPi (Production)
 
-Copy the `rpi/` directory to each Raspberry Pi, set the Elasticsearch host, and run:
+For production RPi deployments, each RPi needs its own hostname. Edit `server/prometheus/prometheus.yml` to add your RPi hostnames:
+
+```yaml
+- job_name: "rpi-nodes"
+  static_configs:
+    - targets:
+        - "rpi-bedroom:9100"
+        - "rpi-kitchen:9100"
+        - "rpi-garage:9100"
+```
+
+Copy the `rpi/` directory to each Raspberry Pi, create the network, and start services:
 
 ```bash
+# On each RPi
+docker network create argus-network
 cd rpi
-ELASTICSEARCH_HOST=http://<server-ip>:9200 docker compose up -d
+NODE_ID=rpi-bedroom docker compose up -d  # Use unique NODE_ID per device
 ```
+
+**Network Benefits:**
+- ✅ No IP configuration needed - uses Docker DNS (container names)
+- ✅ Works across WiFi network changes
+- ✅ RPi containers can reach `elasticsearch:9200` directly
+- ✅ Prometheus scrapes by container name (e.g., `rpi-node-1:9100`)
 
 ## Access
 

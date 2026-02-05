@@ -50,8 +50,6 @@ services:
     restart: unless-stopped
     user: root
     command: ["filebeat", "-e", "--strict.perms=false"]
-    extra_hosts:
-      - "elasticsearch:host-gateway"
     volumes:
       - ./filebeat/filebeat.demo.yml:/usr/share/filebeat/filebeat.yml:ro
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
@@ -61,6 +59,11 @@ services:
       - sensor-rpi-1
       - sensor-rpi-2
       - sensor-rpi-3
+
+networks:
+  default:
+    external: true
+    name: argus-network
 
 volumes:
   filebeat_demo_data:
