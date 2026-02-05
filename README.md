@@ -1,27 +1,32 @@
-# IoT Monitoring Stack
+# Argus
 
-Prometheus + Grafana monitoring stack for Raspberry Pi nodes using Node Exporter.
+Prometheus + Grafana + Alertmanager monitoring stack for Raspberry Pi nodes using Node Exporter.
 
 ## Architecture
 
 ```
-┌──────────────────────────────────────┐
-│       Central Server (Docker)        │
-│                                      │
-│  ┌───────────┐    ┌────────────┐     │
-│  │  Grafana   │←───│ Prometheus │     │
-│  │  :3000     │    │  :9090     │     │
-│  └───────────┘    └─────┬──────┘     │
-└─────────────────────────┼────────────┘
-                          │ scrape every 15s
-        ┌─────────────────┼─────────────────┐
-        ▼                 ▼                 ▼
-   ┌─────────┐      ┌─────────┐      ┌─────────┐
-   │  RPi 1  │      │  RPi 2  │      │  RPi 3  │
-   │  Node   │      │  Node   │      │  Node   │
-   │ Exporter│      │ Exporter│      │ Exporter│
-   │  :9100  │      │  :9100  │      │  :9100  │
-   └─────────┘      └─────────┘      └─────────┘
+┌──────────────────────────────────────────────────┐
+│             Central Server (Docker)              │
+│                                                  │
+│  ┌───────────┐    ┌────────────┐                 │
+│  │  Grafana   │←───│ Prometheus │                 │
+│  │  :3000     │    │  :9090     │                 │
+│  └───────────┘    └──┬──────┬──┘                 │
+│                      │      │ alert.rules.yml    │
+│                      │  ┌───▼──────────┐         │
+│                      │  │ Alertmanager │         │
+│                      │  │    :9093     │         │
+│                      │  └──────────────┘         │
+└──────────────────────┼───────────────────────────┘
+                       │ scrape every 15s
+       ┌───────────────┼───────────────┐
+       ▼               ▼               ▼
+  ┌─────────┐    ┌─────────┐    ┌─────────┐
+  │  RPi 1  │    │  RPi 2  │    │  RPi 3  │
+  │  Node   │    │  Node   │    │  Node   │
+  │ Exporter│    │ Exporter│    │ Exporter│
+  │  :9100  │    │  :9100  │    │  :9100  │
+  └─────────┘    └─────────┘    └─────────┘
 ```
 
 ## Setup
@@ -57,16 +62,17 @@ docker compose up -d
 
 ## Access
 
-| Service    | URL                          | Credentials   |
-|------------|------------------------------|---------------|
-| Grafana    | http://\<server-ip\>:3000    | admin / admin |
-| Prometheus | http://\<server-ip\>:9090    | -             |
+| Service      | URL                            | Credentials   |
+|--------------|--------------------------------|---------------|
+| Grafana      | http://\<server-ip\>:3000     | admin / admin |
+| Prometheus   | http://\<server-ip\>:9090     | -             |
+| Alertmanager | http://\<server-ip\>:9093     | -             |
 
 ## Pre-configured
 
 - **Dashboard**: Node Exporter Full (ID 1860) - auto-provisioned
 - **Datasource**: Prometheus - auto-provisioned
-- **Alert Rules** (Grafana unified alerting):
+- **Alert Rules** (Prometheus → Alertmanager):
   - **InstanceDown**: fires when a node is unreachable for 1 minute
   - **HighCPU**: fires when CPU usage > 90% for 5 minutes
   - **HighMemory**: fires when memory usage > 85% for 5 minutes
@@ -75,14 +81,17 @@ docker compose up -d
 ## Verification
 
 1. Check Prometheus targets: `http://<server-ip>:9090/targets`
-2. Open Grafana dashboard: Dashboards > Node Exporter Full
-3. Check alert rules: Alerting > Alert rules
-4. Test alerts: stop a node exporter on an RPi, alert fires after ~1 min
+2. Check Prometheus alert rules: `http://<server-ip>:9090/alerts`
+3. Open Alertmanager UI: `http://<server-ip>:9093`
+4. Open Grafana dashboard: Dashboards > Node Exporter Full
+5. Test alerts: stop a node exporter on an RPi, InstanceDown fires after ~1 min
 
 ## Adding Notification Channels
 
-Alert notifications are visible in the Grafana UI only. To add Discord or Slack notifications:
+Alerts are routed through Alertmanager with a default webhook receiver (placeholder). To add real notifications, edit `server/alertmanager/alertmanager.yml`:
 
-1. Go to Grafana > Alerting > Contact points
-2. Add a new contact point with your preferred integration
-3. Update the notification policy to route alerts to your contact point
+- **Discord**: add a `discord_configs` receiver
+- **Slack**: add a `slack_configs` receiver
+- **Email**: add an `email_configs` receiver
+
+See the [Alertmanager docs](https://prometheus.io/docs/alerting/latest/configuration/) for all receiver types.
