@@ -1,0 +1,36 @@
+filebeat.inputs:
+  # System logs
+  - type: log
+    enabled: true
+    paths:
+      - /var/log/syslog
+      - /var/log/auth.log
+      - /var/log/kern.log
+    fields:
+      log_type: system
+    fields_under_root: true
+
+  # Docker container logs
+  - type: log
+    enabled: true
+    paths:
+      - /var/lib/docker/containers/*/*.log
+    json.keys_under_root: true
+    json.add_error_key: true
+    fields:
+      log_type: docker
+    fields_under_root: true
+    processors:
+      - add_docker_metadata:
+          host: "unix:///var/run/docker.sock"
+
+processors:
+  - add_host_metadata: ~
+
+output.elasticsearch:
+  hosts: ["${ELASTICSEARCH_HOST}"]
+  indices:
+    - index: "filebeat-%{+yyyy.MM.dd}"
+
+logging.level: info
+logging.to_stderr: true

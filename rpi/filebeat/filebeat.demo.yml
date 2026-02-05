@@ -1,0 +1,22 @@
+filebeat.inputs:
+  # Docker container logs only (no real system logs in demo)
+  - type: log
+    enabled: true
+    paths:
+      - /var/lib/docker/containers/*/*.log
+    json.keys_under_root: true
+    json.add_error_key: true
+    processors:
+      - add_docker_metadata:
+          host: "unix:///var/run/docker.sock"
+
+processors:
+  - add_host_metadata: ~
+
+output.elasticsearch:
+  hosts: ["elasticsearch:9200"]
+  indices:
+    - index: "filebeat-%{+yyyy.MM.dd}"
+
+logging.level: info
+logging.to_stderr: true
